@@ -32,6 +32,15 @@ module Shoulda
           },
         }.freeze
 
+        OBJECT_ASSERTIONS = {
+          :== => {
+            assertions: [true],
+          },
+          :!= => {
+            assertions: [false],
+          },
+        }.freeze
+
         delegate :failure_message, :failure_message_when_negated, to: :comparison_submatchers
 
         def initialize(matcher, value, operator)
@@ -89,6 +98,10 @@ module Shoulda
 
         private
 
+        def object_comparison
+          !option_value.respond_to?('+') && OBJECT_ASSERTIONS.keys.include?(@operator)
+        end
+
         def build_comparison_submatchers
           comparison_combos.map do |diff, submatcher_method_name|
             matcher = __send__(submatcher_method_name, diff, nil)
@@ -112,7 +125,8 @@ module Shoulda
         end
 
         def assertions
-          ERROR_MESSAGES[@operator][:assertions]
+          assertions_map = object_comparison ? OBJECT_ASSERTIONS : ERROR_MESSAGES
+          assertions_map[@operator][:assertions]
         end
 
         def option_value
@@ -129,6 +143,8 @@ module Shoulda
         end
 
         def diffs_to_compare
+          return [option_value] if object_comparison
+
           diff_to_compare = @matcher.diff_to_compare
           values = case option_value
                    when String then diffs_when_string(diff_to_compare)
